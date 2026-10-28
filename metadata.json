@@ -1,0 +1,6 @@
+{
+  "name": "SecurePlus",
+  "description": "Enterprise-grade high-security vault with decoupled cloud backend, zero-trust rules, and client-side encryption.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

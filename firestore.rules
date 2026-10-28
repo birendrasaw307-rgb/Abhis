@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidTimestamp(val) {
+      return val is timestamp;
+    }
+
+    function isValidCategory(cat) {
+      return cat in ['CREDENTIAL', 'API_KEY', 'SECURE_NOTE', 'FINANCIAL', 'RECOVERY'];
+    }
+
+    function isValidSecurityLevel(lvl) {
+      return lvl in ['STANDARD', 'HIGH', 'MAXIMUM'];
+    }
+
+    function isValidEventType(type) {
+      return type in ['AUTH_LOGIN', 'VAULT_ACCESS', 'ITEM_ENCRYPTED', 'ITEM_DECRYPTED', 'PIN_VERIFIED', 'PIN_FAILED', 'SECURITY_SCAN', 'BACKEND_PING'];
+    }
+
+    function isValidSeverity(sev) {
+      return sev in ['INFO', 'WARNING', 'CRITICAL'];
+    }
+
+    function isValidVaultItem(data) {
+      return data.keys().hasAll(['userId', 'title', 'category', 'encryptedPayload', 'securityLevel', 'iv', 'favorite', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'title', 'category', 'encryptedPayload', 'securityLevel', 'iv', 'tags', 'favorite', 'notesPreview', 'createdAt', 'updatedAt'])
+        && data.userId is string && data.userId.size() > 0
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 100
+        && data.category is string && isValidCategory(data.category)
+        && data.encryptedPayload is string && data.encryptedPayload.size() > 0 && data.encryptedPayload.size() <= 8000
+        && data.securityLevel is string && isValidSecurityLevel(data.securityLevel)
+        && data.iv is string && data.iv.size() > 0 && data.iv.size() <= 100
+        && data.favorite is bool
+        && (!('tags' in data) || data.tags is list)
+        && (!('notesPreview' in data) || (data.notesPreview is string && data.notesPreview.size() <= 200))
+        && isValidTimestamp(data.createdAt)
+        && isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['userId', 'eventType', 'severity', 'details', 'createdAt'])
+        && data.keys().hasOnly(['id', 'userId', 'eventType', 'severity', 'details', 'ipAddress', 'createdAt'])
+        && data.userId is string && data.userId.size() > 0
+        && data.eventType is string && isValidEventType(data.eventType)
+        && data.severity is string && isValidSeverity(data.severity)
+        && data.details is string && data.details.size() <= 500
+        && (!('ipAddress' in data) || (data.ipAddress is string && data.ipAddress.size() <= 50))
+        && isValidTimestamp(data.createdAt);
+    }
+
+    function isValidSecurityProfile(data) {
+      return data.keys().hasAll(['userId', 'securityScore', 'twoFactorEnabled', 'biometricLockEnabled', 'autoLockSeconds', 'backendStatus', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'securityScore', 'twoFactorEnabled', 'biometricLockEnabled', 'autoLockSeconds', 'backendStatus', 'updatedAt'])
+        && data.userId is string && data.userId.size() > 0
+        && data.securityScore is int && data.securityScore >= 0 && data.securityScore <= 100
+        && data.twoFactorEnabled is bool
+        && data.biometricLockEnabled is bool
+        && data.autoLockSeconds is int && data.autoLockSeconds >= 0
+        && data.backendStatus is string && data.backendStatus.size() <= 50
+        && isValidTimestamp(data.updatedAt);
+    }
+
+    // Isolated user vault subcollections
+    match /users/{userId} {
+      // Direct access to user document itself is restricted
+      allow read, write: if isOwner(userId);
+
+      // Vault items (encrypted secrets)
+      match /vault_items/{itemId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && isValidVaultItem(request.resource.data);
+        allow update: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.createdAt == resource.data.createdAt
+          && isValidVaultItem(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      // Security audit logs (immutable event stream)
+      match /audit_logs/{logId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && isValidAuditLog(request.resource.data);
+        // Immutable audit logs: No updates or deletes allowed
+        allow update, delete: if false;
+      }
+
+      // Security profile
+      match /security_profile/{profileId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && isValidSecurityProfile(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

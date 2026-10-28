@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "VaultItem": {
+      "title": "VaultItem",
+      "description": "An end-to-end encrypted secret stored securely in the user's isolated cloud vault.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the owner." },
+        "title": { "type": "string", "description": "Human-readable label for the vault item." },
+        "category": { "type": "string", "enum": ["CREDENTIAL", "API_KEY", "SECURE_NOTE", "FINANCIAL", "RECOVERY"] },
+        "encryptedPayload": { "type": "string", "description": "AES-256-GCM encrypted payload." },
+        "securityLevel": { "type": "string", "enum": ["STANDARD", "HIGH", "MAXIMUM"] },
+        "iv": { "type": "string", "description": "Base64 encoded initialization vector." },
+        "tags": { "type": "array", "description": "Tag labels." },
+        "favorite": { "type": "boolean", "description": "Pinned/favorite flag." },
+        "notesPreview": { "type": "string", "description": "Safe preview text." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "category", "encryptedPayload", "securityLevel", "iv", "favorite", "createdAt", "updatedAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable security event record in the audit trail.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the owner." },
+        "eventType": { "type": "string", "enum": ["AUTH_LOGIN", "VAULT_ACCESS", "ITEM_ENCRYPTED", "ITEM_DECRYPTED", "PIN_VERIFIED", "PIN_FAILED", "SECURITY_SCAN", "BACKEND_PING"] },
+        "severity": { "type": "string", "enum": ["INFO", "WARNING", "CRITICAL"] },
+        "details": { "type": "string", "description": "Event diagnostic message." },
+        "ipAddress": { "type": "string", "description": "Origin address." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "eventType", "severity", "details", "createdAt"]
+    },
+    "SecurityProfile": {
+      "title": "SecurityProfile",
+      "description": "Security preferences and cloud health profile.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the owner." },
+        "securityScore": { "type": "integer", "description": "0 to 100 overall health." },
+        "twoFactorEnabled": { "type": "boolean" },
+        "biometricLockEnabled": { "type": "boolean" },
+        "autoLockSeconds": { "type": "integer" },
+        "backendStatus": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "securityScore", "twoFactorEnabled", "biometricLockEnabled", "autoLockSeconds", "backendStatus", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/vault_items/{itemId}": {
+      "schema": { "$ref": "#/entities/VaultItem" },
+      "description": "User's encrypted vault items."
+    },
+    "/users/{userId}/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "User's immutable security event logs."
+    },
+    "/users/{userId}/security_profile/{profileId}": {
+      "schema": { "$ref": "#/entities/SecurityProfile" },
+      "description": "User's security configuration profile."
+    }
+  }
+}
