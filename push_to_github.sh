@@ -1,5 +1,5 @@
 #!/bin/bash
-# SecurePlus Frontend - GitHub Push Automation Script
+# SecurePlus - GitHub Push Automation Script (Pure Android App / APK Code Only)
 
 set -e
 
@@ -14,15 +14,20 @@ fi
 
 REPO_URL="$1"
 
-echo "=== Initializing and Preparing Git Repository ==="
+echo "=== Initializing Git Repository ==="
 [ -d .git ] || git init
+git config user.name "AI Studio Developer" 2>/dev/null || true
+git config user.email "developer@aistudio.google.com" 2>/dev/null || true
 git branch -M main
 
-echo "=== Staging Frontend Files ==="
+echo "=== Excluding Backend Cloud Rules from Git ==="
+git rm --cached firebase-blueprint.json firebase.json firestore.rules firestore.test.js 2>/dev/null || true
+
+echo "=== Staging Pure Android Studio Project Files ==="
 git add .
 
-echo "=== Creating Initial Commit ==="
-git commit -m "feat: Decoupled SecurePlus Frontend with Jetpack Compose, AES-256 and Zero-Trust Cloud architecture" || echo "Working tree clean, no new changes to commit."
+echo "=== Creating Commit (Pure Client APK Code) ==="
+git commit -m "feat: Pure Android Studio APK client project (backend rules excluded)" || echo "Working tree clean, no new changes to commit."
 
 echo "=== Configuring Remote URL ==="
 if git remote | grep -q "^origin$"; then
@@ -31,11 +36,12 @@ else
     git remote add origin "$REPO_URL"
 fi
 
-echo "=== Pushing to GitHub (main branch) ==="
+echo "=== Pushing Android Studio App Code to GitHub (main) ==="
 git push -u origin main
 
 echo ""
 echo "=========================================================="
-echo " ✅ SecurePlus Frontend successfully pushed to GitHub!"
+echo " ✅ Android Studio App code successfully pushed to GitHub!"
+echo " (Backend cloud files were completely excluded)"
 echo " Repository URL: $REPO_URL"
 echo "=========================================================="

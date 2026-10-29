@@ -19,3 +19,9 @@ debug.keystore
 debug.keystore.base64
 .build-outputs/
 *-debug.log
+
+# Backend files (Rules, Cloud Blueprint, Test scripts) - Excluded from GitHub
+firebase-blueprint.json
+firebase.json
+firestore.rules
+firestore.test.js
